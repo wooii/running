@@ -3,5 +3,5 @@ numpy
 pandas
 datetime
 plotly
-sklearn
+scikit-learn
 
