@@ -56,12 +56,10 @@ class RunningPaceApp:
         seconds_per_meter = pd.to_timedelta(t).dt.total_seconds() / self.data["distance"]
         return seconds_per_meter * (100 if self.pace_type == "s/100m" else 1000)
 
-    def format_pace(self, seconds, return_numeric=False):
+    def format_pace(self, seconds):
         if pd.isna(seconds):
             return None
-        pace_datetime = datetime.datetime.min + datetime.timedelta(seconds=seconds)
-        pace_formatted = pace_datetime.strftime("%M:%S")
-        return (pace_datetime, pace_formatted) if return_numeric else pace_datetime
+        return datetime.datetime.min + datetime.timedelta(seconds=seconds)
 
     def add_trend_line(self, column, color, name, distance_range):
         trendline_data = self.data[(self.data["distance"] >= distance_range[0])
@@ -92,8 +90,13 @@ class RunningPaceApp:
         )
 
         # Create hover text with both formula and x, y data points
-        hover_text = [f"Distance: {dist:.0f}m<br>Pace: {p:.2f} s/100m<br>{formula}"
-                      for dist, p in zip(x_range, y_pred)]
+        hover_text = [
+            f"Distance: {dist:.0f}m<br>Pace: {p.strftime('%M:%S')} /km<br>{formula}"
+            if self.pace_type == "mm:ss/km" else
+            f"Distance: {dist:.0f}m<br>Pace: {p:.2f} s/100m<br>{formula}"
+            for dist, p in zip(x_range, y_pred)
+        ]
+
 
         return go.Scatter(
             x=x_range,
