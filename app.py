@@ -1,3 +1,11 @@
+"""This app visualizes and predicts running performance across distances,
+comparing personal bests with benchmarks.
+
+To test the app locally:
+1. Open a terminal, navigate to the folder containing 'app.py' using 'cd'.
+2. Run the app with the command 'streamlit run app.py'.
+"""
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -89,14 +97,12 @@ class RunningPaceApp:
             f"{abs(model.intercept_):.2f}, R²={r2:.3f}"
         )
 
-        # Create hover text with both formula and x, y data points
         hover_text = [
             f"Distance: {dist:.0f}m<br>Pace: {p.strftime('%M:%S')} /km<br>{formula}"
             if self.pace_type == "mm:ss/km" else
             f"Distance: {dist:.0f}m<br>Pace: {p:.2f} s/100m<br>{formula}"
             for dist, p in zip(x_range, y_pred)
         ]
-
 
         return go.Scatter(
             x=x_range,
@@ -112,14 +118,6 @@ class RunningPaceApp:
 
     def plot_data(self):
         if self.selected_distances:
-            st.write("""
-            ## Running Pace Analysis and Prediction
-            1. Pace is linearly related to log₂(Distance).
-            2. Two distinct phases: 200m to 1500m and 1500m to 42195m (marathon).
-            3. Each phase follows its own linear formula: Pace = a * log₂(Distance) + b.
-            4. Use this model to predict or evaluate your personal best for various distances.
-            """)
-
             data_filtered = self.data[self.data["distance"].isin(self.selected_distances)]
             fig = go.Figure()
             colors = px.colors.qualitative.Plotly
@@ -178,6 +176,16 @@ class RunningPaceApp:
         else:
             st.write("Please select at least one distance.")
 
+    def add_title(self):
+        with open('README.md', 'r') as file:
+            content = file.readlines()[0]
+        st.write("".join(content))
+
+    def add_introduction(self):
+        with open('README.md', 'r') as file:
+            content = file.readlines()[1:]
+        st.write("".join(content))
+
     def upload_data(self):
         uploaded_file = st.file_uploader("Upload a new CSV", type="csv")
         if uploaded_file:
@@ -190,9 +198,12 @@ class RunningPaceApp:
 
     def display_data(self):
         st.write(self.data)
+        st.write("wr: world record, pb: personal best.")
 
     def run(self):
+        self.add_title()
         self.plot_data()
+        self.add_introduction()
         self.upload_data()
         self.display_buttons()
         self.display_data()
