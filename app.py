@@ -15,7 +15,7 @@ class RunningPaceApp:
         self.data = st.session_state["data"]
         self.scale_option = st.sidebar.radio("Choose x-axis scale", ["Log", "Linear"])
         self.pace_type = st.sidebar.radio("Choose y-axis pace type", ["s/100m", "mm:ss/km"])
-        self.show_trendline = st.sidebar.checkbox("Show Trend Lines", False)
+        self.show_trendline = st.sidebar.checkbox("Show Trend Lines", True)
         self.selected_columns = st.sidebar.multiselect(
             label="Select columns to plot",
             options=self.columns_to_plot,
@@ -77,19 +77,32 @@ class RunningPaceApp:
         if pace.empty or distance_log2.empty:
             return None
 
-        model = LinearRegression().fit(distance_log2.values.reshape(-1, 1), pace)
+        model = LinearRegression(positive=True).fit(distance_log2.values.reshape(-1, 1), pace)
         x_range = np.linspace(distance_range[0], distance_range[1], 100)
         y_pred = model.predict(np.log2(x_range).reshape(-1, 1))
 
         if self.pace_type == "mm:ss/km":
             y_pred = [self.format_pace(p) for p in y_pred]
 
-        formula = f"P = {model.coef_[0]:.3f}*log2(D) + {model.intercept_:.3f}, R²={r2_score(pace, model.predict(distance_log2.values.reshape(-1, 1))):.3f}"
+        r2 = r2_score(pace, model.predict(distance_log2.values.reshape(-1, 1)))
+        formula = (
+            f"P = {model.coef_[0]:.2f}log₂D {'-' if model.intercept_ < 0 else '+'} "
+            f"{abs(model.intercept_):.2f}, R²={r2:.3f}"
+        )
         return go.Scatter(x=x_range, y=y_pred, mode="lines", line=dict(color=color, width=2),
                           name=f"{name} ({distance_range[0]}-{distance_range[1]}m)\n{formula}")
 
     def plot_data(self):
         if self.selected_distances:
+            # Add text introduction
+            st.write("""
+            ## Running Pace Analysis and Prediction
+            1. Pace is linearly related to log₂(Distance).
+            2. Two distinct phases: 200m to 1500m and 1500m to 42195m (marathon).
+            3. Each phase follows its own linear formula: Pace = a * log₂(Distance) + b.
+            4. Use this model to predict or evaluate your personal best for various distances.
+            """)
+
             data_filtered = self.data[self.data["distance"].isin(self.selected_distances)]
             fig = go.Figure()
 
@@ -123,6 +136,13 @@ class RunningPaceApp:
                     title="Pace (s/100m)",
                     rangemode="tozero"
                 )
+
+            # Add title to the plot
+            fig.update_layout(
+                title={
+                    'text': "Running Pace vs Distance",
+                },
+            )
 
             st.plotly_chart(fig)
         else:
