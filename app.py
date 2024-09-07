@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 import numpy as np
 import datetime
+import plotly.express as px
 
 
 class RunningPaceApp:
@@ -89,12 +90,25 @@ class RunningPaceApp:
             f"P = {model.coef_[0]:.2f}log₂D {'-' if model.intercept_ < 0 else '+'} "
             f"{abs(model.intercept_):.2f}, R²={r2:.3f}"
         )
-        return go.Scatter(x=x_range, y=y_pred, mode="lines", line=dict(color=color, width=2),
-                          name=f"{name} ({distance_range[0]}-{distance_range[1]}m)\n{formula}")
+
+        # Create hover text with both formula and x, y data points
+        hover_text = [f"Distance: {dist:.0f}m<br>Pace: {p:.2f} s/100m<br>{formula}"
+                      for dist, p in zip(x_range, y_pred)]
+
+        return go.Scatter(
+            x=x_range,
+            y=y_pred,
+            mode="lines",
+            line=dict(color=color, width=2),
+            name=name,
+            text=hover_text,
+            hoverinfo="text",
+            showlegend=False,
+            opacity=0.8
+        )
 
     def plot_data(self):
         if self.selected_distances:
-            # Add text introduction
             st.write("""
             ## Running Pace Analysis and Prediction
             1. Pace is linearly related to log₂(Distance).
@@ -105,19 +119,27 @@ class RunningPaceApp:
 
             data_filtered = self.data[self.data["distance"].isin(self.selected_distances)]
             fig = go.Figure()
+            colors = px.colors.qualitative.Plotly
 
-            for column in self.selected_columns:
+            for idx, column in enumerate(self.selected_columns):
+                color = colors[idx % len(colors)]  # Use modulo to cycle through colors
                 pace = self.finish_time_to_pace(data_filtered[column])
                 if self.pace_type == "mm:ss/km":
                     pace = [self.format_pace(p) for p in pace]
                 else:
                     pace = pace.tolist()
 
-                fig.add_trace(go.Scatter(x=data_filtered["distance"], y=pace,
-                                         mode="markers", marker=dict(size=6), name=column))
+                # Plot the data points
+                fig.add_trace(go.Scatter(
+                    x=data_filtered["distance"],
+                    y=pace,
+                    mode="markers",
+                    marker=dict(size=6, color=color),
+                    name=f"{column}"
+                ))
 
                 if self.show_trendline:
-                    for color, distance_range in [("blue", (200, 1500)), ("green", (1500, 42195))]:
+                    for distance_range in [(200, 1500), (1500, 42195)]:
                         trend_line = self.add_trend_line(column, color, column, distance_range)
                         if trend_line:
                             fig.add_trace(trend_line)
@@ -137,11 +159,8 @@ class RunningPaceApp:
                     rangemode="tozero"
                 )
 
-            # Add title to the plot
             fig.update_layout(
-                title={
-                    'text': "Running Pace vs Distance",
-                },
+                title={'text': "Running Pace vs Distance"},
             )
 
             st.plotly_chart(fig)
