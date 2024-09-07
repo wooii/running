@@ -161,6 +161,14 @@ class RunningPaceApp:
 
             fig.update_layout(
                 title={'text': "Running Pace vs Distance"},
+                legend=dict(
+                    yanchor="top",
+                    y=1.05,  # Position inside the plot (top)
+                    xanchor="left",
+                    x=0.05,  # Position inside the plot (left)
+                    orientation="v"  # Vertical orientation if needed
+                ),
+                height=600  # Adjust height of plot
             )
 
             st.plotly_chart(fig)
